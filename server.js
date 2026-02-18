@@ -6,6 +6,7 @@ require('dotenv').config();
 const express = require('express');
 const app = express();
 const expressWs = require('express-ws')(app);
+const session = require('express-session');
 
 const oauthRouter = require('./core/routes/oauth.js');
 
@@ -19,6 +20,18 @@ const messageHandler = require('./core/messageHandler');
 
 // Serve static files if needed
 app.use(express.static(global.__basedir + '/public'));
+app.use(
+    session({
+        secret: process.env.SESSION_SECRET || 'super-secret-change-me',
+        resave: false,
+        saveUninitialized: false,
+        cookie: {
+            secure: process.env.NODE_ENV === 'production', // true if HTTPS
+            httpOnly: true,
+            sameSite: 'lax'
+        }
+    })
+);
 app.use('/oauth', oauthRouter);
 
 // Minimal route

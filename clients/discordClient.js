@@ -1,4 +1,5 @@
 const axios = require('axios');
+const crypto = require('crypto');
 const querystring = require('querystring');
 const { Client, GatewayIntentBits } = require('discord.js');
 
@@ -11,15 +12,22 @@ class DiscordClient {
         this.client = null;
     }
 
-    getAuthUrl() {
+    getAuthUrl(req) {
         const scopes = 'bot applications.commands';
+
+        const state = crypto.randomBytes(16).toString('hex');
+
+        req.session.oauthState = state;
+
         const params = new URLSearchParams({
             client_id: this.clientId,
             redirect_uri: this.redirectUri,
             response_type: 'code',
             scope: scopes,
             permissions: '534723951680',
+            state
         });
+
         return `https://discord.com/api/oauth2/authorize?${params.toString()}`;
     }
 
