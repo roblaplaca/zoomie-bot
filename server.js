@@ -17,6 +17,7 @@ const discordClient = require('./clients/discordClient');
 const eventEmitter = require('./core/eventEmitter');
 
 const messageHandler = require('./core/messageHandler');
+const watchHandler = require('./core/watchHandler');
 
 // Serve static files if needed
 app.use(express.static(global.__basedir + '/public'));
@@ -47,7 +48,8 @@ app.listen(4000, async () => {
     // Connect Discord bot
     await discordClient.connect();
     messageHandler.start();
-    
+    await watchHandler.start();
+
     logger.info('Discord bot Zoomie is online!');
 
     // Start any other background tasks

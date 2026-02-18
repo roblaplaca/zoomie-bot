@@ -115,6 +115,26 @@ class DiscordClient {
             }
         });
     }
+
+    async sendEmbed(channelId, { text, ...embedData }) {
+        if (!this.client || !this.client.isReady()) {
+            throw new Error('Discord client is not connected.');
+        }
+
+        const channel = this.client.channels.cache.get(channelId);
+        if (!channel || !channel.isTextBased()) {
+            console.warn('Discord channel not found or not text-based:', channelId);
+            return;
+        }
+
+        // Only send image if url is provided
+        if (embedData.image && embedData.image.url && typeof embedData.image.url !== 'string') {
+            embedData.image.url = String(embedData.image.url);
+        }
+
+        await channel.send({ content: text, embeds: [embedData] });
+    }
+
 }
 
 module.exports = new DiscordClient();
