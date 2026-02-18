@@ -7,34 +7,40 @@ class LearnCommand extends Command {
     async execute(context) {
         const { args, guildId } = context;
 
-        // Require at least a user mention and some quote text
         if (args.length < 2) {
-            return "Usage: !learn @user [quote]";
+            return "Usage: !learn @user|concept [quote]";
         }
 
-        // Extract user mention
-        const userMention = args.shift();
-        const discordUserId = userMention.replace(/[<@!>]/g, '');
+        // Extract target (could be a user mention or concept string)
+        const target = args.shift();
+        let targetIdOrConcept;
 
-        // Basic mention validation
-        if (!/^\d+$/.test(discordUserId)) {
-            return "You must mention a valid user.";
+        // Check if it's a user mention
+        const mentionMatch = target.match(/^<@!?(\d+)>$/);
+        if (mentionMatch) {
+            targetIdOrConcept = mentionMatch[1]; // Discord user ID
+        } else {
+            // Treat as concept string
+            targetIdOrConcept = target.toLowerCase(); // e.g., "trashtalk"
         }
 
         const quote = args.join(' ').trim();
-
         if (!quote) {
             return "You must provide a quote to learn!";
         }
 
         try {
-            await learnedQuotesDao.addQuote(guildId, discordUserId, quote);
+            await learnedQuotesDao.addQuote(guildId, targetIdOrConcept, quote);
 
             logger.info(
-                `Learned quote for ${discordUserId} in guild ${guildId}: "${quote}"`
+                `Learned quote for "${targetIdOrConcept}" in guild ${guildId}: "${quote}"`
             );
 
-            return `Learned a new quote for <@${discordUserId}>!`;
+            if (mentionMatch) {
+                return `Learned a new quote for <@${targetIdOrConcept}>!`;
+            } else {
+                return `Learned a new quote for concept "${targetIdOrConcept}"!`;
+            }
 
         } catch (err) {
             logger.error('Error saving learned quote', err);
