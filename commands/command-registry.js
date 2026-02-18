@@ -1,12 +1,16 @@
 const ChooseCommand = require('./choose/choose');
 const EightBallCommand = require('./eightball/eightball');
+const LearnCommand = require('./learn/learn');
+const QuoteCommand = require('./quote/quote');
 const WatchCommand = require('./watch/watch');
 const UnwatchCommand = require('./unwatch/unwatch');
 
 const commandRegistry = new Map();
 
-commandRegistry.set('choose', ChooseCommand);
 commandRegistry.set('8ball', EightBallCommand);
+commandRegistry.set('choose', ChooseCommand);
+commandRegistry.set('learn', LearnCommand);
+commandRegistry.set('quote', QuoteCommand);
 commandRegistry.set('watch', WatchCommand);
 commandRegistry.set('unwatch', UnwatchCommand);
 
