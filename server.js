@@ -20,6 +20,7 @@ const messageHandler = require('./core/messageHandler');
 
 // Serve static files if needed
 app.use(express.static(global.__basedir + '/public'));
+app.set('trust proxy', 1);
 app.use(
     session({
         secret: process.env.SESSION_SECRET || 'super-secret-change-me',
