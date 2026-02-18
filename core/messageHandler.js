@@ -1,6 +1,6 @@
+const { PermissionsBitField } = require('discord.js');
 const discordClient = require('../clients/discordClient');
 const commandRegistry = require('../commands/command-registry');
-// const dao = require('../data/dao');
 const Logger = require('../core/logger');
 
 const logger = new Logger();
@@ -15,34 +15,34 @@ class MessageHandler {
     }
 
     bindDiscordEvents() {
-        discordClient.client.on('messageCreate', (message) => {
-            // Ignore messages from bots (including itself)
-            if (message.author.bot) return;
+        discordClient.client.on('messageCreate', async (message) => {
+            try {
+                // Ignore bots (including itself)
+                if (message.author.bot) return;
 
-            const payload = {
-                displayName: message.author.username,
-                message: message.content,
-                source: 'Discord',
-                userId: message.author.id,
-                isModerator: message.member?.permissions.has('ADMINISTRATOR') || false,
-                channelId: message.channel.id
-            };
+                const payload = {
+                    displayName: message.author.username,
+                    message: message.content,
+                    source: 'Discord',
+                    userId: message.author.id,
+                    isModerator:
+                        message.member?.permissions.has(
+                            PermissionsBitField.Flags.Administrator
+                        ) || false,
+                    channelId: message.channel.id,
+                    guildId: message.guild?.id
+                };
 
-            this.handleMessage(payload);
+                await this.handleMessage(payload);
+
+            } catch (err) {
+                logger.error('Unhandled messageCreate error:', err);
+            }
         });
     }
 
     async handleMessage(payload) {
-        const { displayName, message, userId, channelId } = payload;
-
-        console.log('handle the message');
-        // // Store user and message
-        // const userResponse = await dao.getOrCreateUser(displayName, 'Discord', userId);
-        // await dao.storeChatMessage(userResponse.userId, message, 'Discord');
-
-        // payload.userId = userResponse.userId;
-
-        logger.debug('payload:', payload);
+        const { message, channelId } = payload;
 
         // Handle commands
         if (message.startsWith('!')) {
@@ -51,25 +51,30 @@ class MessageHandler {
             } catch (error) {
                 logger.error('Error processing command:', error);
             }
-        } else {
-            // Check if bot was mentioned
-            const discordChannel = discordClient.client.channels.cache.get(channelId);
-            if (!discordChannel || !discordChannel.isTextBased()) return;
+            return;
+        }
 
-            // Get the bot's user ID
-            const botId = discordClient.client.user.id;
+        // Non-command handling (mentions / DMs)
+        const channel = discordClient.client.channels.cache.get(channelId);
+        if (!channel || !channel.isTextBased()) return;
 
-            // If message mentions Zoomie, respond with meow
-            if (discordChannel.type === 1 || discordChannel.type === 0) {
-                // type 1 = DM, type 0 = guild text channel
-                const isMentioned = discordChannel.messages?.cache?.some?.((m) => m.mentions.has(botId)) 
-                                    || message.includes(`<@${botId}>`);
+        const botId = discordClient.client.user.id;
 
-                if (isMentioned || discordChannel.type === 1) {
-                    discordChannel.send('meow?').catch(err => {
-                        logger.error('Failed to send meow:', err);
-                    });
-                }
+        const isDM = !payload.guildId;
+        const isMentioned = channel.isTextBased() &&
+            channel.client.user &&
+            channel.client.user.id &&
+            channel.client.user.id === botId &&
+            false;
+
+        // Proper mention detection
+        const mentioned = payload.message.includes(`<@${botId}>`);
+
+        if (isDM || mentioned) {
+            try {
+                await channel.send('meow?');
+            } catch (err) {
+                logger.error('Failed to send meow:', err);
             }
         }
     }
@@ -79,11 +84,13 @@ class MessageHandler {
         const parts = message.substring(1).split(/(\s*(&&|\|)\s*)/);
 
         const commands = [];
+
         for (let i = 0; i < parts.length; i++) {
             const part = parts[i].trim();
             if (!part || part === '&&' || part === '|') continue;
 
             const parts2 = part.split(/\s+/);
+
             commands.push({
                 name: parts2[0].toLowerCase(),
                 args: parts2.slice(1),
@@ -121,33 +128,40 @@ class MessageHandler {
                     lastResult,
                     isPiped,
                     isChained,
-                    userId: payload.userId
+                    userId: payload.userId,
+                    channelId: payload.channelId,
+                    guildId: payload.guildId
                 };
 
-                if (commandInstance.redeemOnly()) throw new Error('Command is redeem only');
+                if (commandInstance.redeemOnly()) {
+                    throw new Error('Command is redeem only');
+                }
 
                 const result = await commandInstance.execute(context);
                 lastResult = result;
 
                 if (!command.operator && result) {
-                    // Send message back to Discord
                     const channel = discordClient.client.channels.cache.get(payload.channelId);
                     if (channel && channel.isTextBased()) {
-                        channel.send(result);
+                        await channel.send(result);
                     }
                 }
+
             } catch (error) {
                 logger.error(`Error executing command !${command.name}:`, error);
+
                 const channel = discordClient.client.channels.cache.get(payload.channelId);
                 if (channel && channel.isTextBased()) {
-                    channel.send(`An error occurred executing !${command.name}.`);
+                    await channel.send(`An error occurred executing !${command.name}.`);
                 }
             }
         }
     }
 
     checkPermissions(payload, command) {
-        if (command.permissions?.includes('mod') && !payload.isModerator) return false;
+        if (command.permissions?.includes('mod') && !payload.isModerator) {
+            return false;
+        }
         return true;
     }
 
