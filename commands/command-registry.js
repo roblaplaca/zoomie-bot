@@ -4,6 +4,7 @@ const EightBallCommand = require('./eightball/eightball');
 const LearnCommand = require('./learn/learn');
 const QuoteCommand = require('./quote/quote');
 const RollCommand = require('./roll/roll');
+const RandomCommand = require('./random/random');
 const WatchCommand = require('./watch/watch');
 const UnwatchCommand = require('./unwatch/unwatch');
 
@@ -14,6 +15,7 @@ commandRegistry.set('choose', ChooseCommand);
 commandRegistry.set('coinflip', CoinflipCommand);
 commandRegistry.set('learn', LearnCommand);
 commandRegistry.set('quote', QuoteCommand);
+commandRegistry.set('random', RandomCommand);
 commandRegistry.set('roll', RollCommand);
 commandRegistry.set('watch', WatchCommand);
 commandRegistry.set('unwatch', UnwatchCommand);
