@@ -1,6 +1,7 @@
 const { PermissionsBitField } = require('discord.js');
 const discordClient = require('../clients/discordClient');
 const commandRegistry = require('../commands/command-registry');
+const reactionCommandMap = require('../commands/reaction-command-map');
 const Logger = require('../core/logger');
 
 const logger = new Logger();
@@ -39,6 +40,52 @@ class MessageHandler {
                 logger.error('Unhandled messageCreate error:', err);
             }
         });
+
+        discordClient.client.on('messageReactionAdd', async (reaction, user) => {
+            try {
+                if (reaction.partial) await reaction.fetch();
+                if (user.bot) return;
+
+                const commandName = reactionCommandMap.get(reaction.emoji.name);
+                if (!commandName) return;
+
+                const CommandClass = commandRegistry.get(commandName);
+                if (!CommandClass || typeof CommandClass !== 'function') return;
+
+                const message = reaction.message;
+
+                // Build simulated context
+                const simulatedContext = {
+                    channelId: message.channel.id,
+                    guildId: message.guild?.id,
+                    client: discordClient.client,
+                    userId: user.id,          // the reactor
+                    displayName: user.username,
+                    message: message.content,
+                    fromReaction: true,
+                    reactingUser: user,
+                    lastResult: null
+                };
+
+                // Pre-fill args: first arg = original message author, rest = message content
+                const originalAuthorMention = `<@${message.author.id}>`;
+                const restOfMessage = message.content ? message.content.split(/\s+/) : [];
+                simulatedContext.args = [originalAuthorMention, ...restOfMessage];
+
+                // Instantiate & execute
+                const commandInstance = new CommandClass();
+                const result = await commandInstance.execute(simulatedContext);
+
+                // Send response to channel
+                if (result && message.channel.isTextBased()) {
+                    await message.channel.send(result);
+                }
+
+            } catch (err) {
+                console.error('Reaction → Command error:', err);
+            }
+        });
+
     }
 
     async handleMessage(payload) {
