@@ -10,7 +10,7 @@ class Joke extends Command {
 
         try {
             const res = await axios.get(
-                'https://v2.jokeapi.dev/joke/Miscellaneous,Dark,Pun,Spooky',
+                'https://v2.jokeapi.dev/joke/Miscellaneous,Pun,Spooky?blacklistFlags=nsfw,religious,political,racist,sexist,explicit',
                 {
                     params: {
                         blacklistFlags: 'racist,sexist,explicit'
