@@ -1,4 +1,3 @@
-const AdviceCommand = require('./advice/advice');
 const ChooseCommand = require('./choose/choose');
 const CoinflipCommand = require('./coinflip/coinflip');
 const EightBallCommand = require('./eightball/eightball');
@@ -13,7 +12,6 @@ const UnwatchCommand = require('./unwatch/unwatch');
 
 const commandRegistry = new Map();
 
-commandRegistry.set('advice', AdviceCommand);
 commandRegistry.set('8ball', EightBallCommand);
 commandRegistry.set('choose', ChooseCommand);
 commandRegistry.set('coinflip', CoinflipCommand);
