@@ -1,27 +1,14 @@
 const Command = require('../command-interface.js');
-let eventEmitter = require('../../core/eventEmitter');
+const { SlashCommandBuilder } = require('discord.js');
 
 class Rocket extends Command {
-    execute(context) {
-        const { lastResult } = context;
+    static slashData = new SlashCommandBuilder()
+        .setName('rocket')
+        .setDescription('Launch a rocket!');
 
-        const rocketArt = this.getRocketArt();
-        const response = `\`\`\`\n${rocketArt}\n\`\`\``;
-
-        // Logging
-        if (lastResult === null) {
-            console.log('Rocket deployed!');
-        } else {
-            console.log('Rocket executed in chain/pipeline.');
-        }
-
-        // Emit for UI/overlay (if you want to show the rocket there too)
-        eventEmitter.emit('broadcast', {
-            type: 'command:rocket',
-            payload: response
-        });
-
-        return response;
+    async execute(context) {
+        // context could be from a reaction or a slash command
+        return '```\n' + this.getRocketArt() + '\n```';
     }
 
     getRocketArt() {
@@ -30,27 +17,28 @@ class Rocket extends Command {
           /^\\
          /___\\
         |=   =|
+        |     | 
         |     |
         |     |
-        |     |  
+        |  N  |
+        |  O  |  
+        |  T  |
+        |  H  |
+        |  I  |        
+        |  N  |
+        |  G  |
         |     |
-        |     |
-        |     |        
-        |  L  |
+        |  T  |
         |  O  |
-        |  O  |
-        |  K  |
         |     |
-        |  A  |
-        |  W  |
-        |  A  |
-        |  Y  |
-        |  !  |
-        |  !  |
-        |  !  |
+        |  S  |
+        |  E  |
+        |  E  |
         |     |
-        |     |
-        |     |  
+        |  H  |
+        |  E  |
+        |  R  |
+        |  E  |
         |     |
         |     |
         |     |        
@@ -72,7 +60,7 @@ class Rocket extends Command {
            .
            .
            .
-   🔥 LOOK AWAY! 🔥
+🔥 NOTHING TO SEE HERE! 🔥
 `;
     }
 }

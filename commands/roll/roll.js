@@ -1,32 +1,34 @@
 const Command = require('../command-interface.js');
-let eventEmitter = require('../../core/eventEmitter');
+const { SlashCommandBuilder } = require('discord.js');
 
 class Roll extends Command {
-    execute(context) {
-        const { message, lastResult } = context;
+    static slashData = new SlashCommandBuilder()
+        .setName('roll')
+        .setDescription('Roll a dice')
+        .addIntegerOption(option =>
+            option.setName('max')
+                  .setDescription('Maximum number on the dice')
+                  .setRequired(false)
+        );
 
-        // Extract max number, default to 6
-        const match = message.match(/^!roll\s*(\d+)?/i);
-        const max = match && match[1] ? parseInt(match[1]) : 6;
+    async execute(context) {
+        // For slash commands
+        let max = 6;
 
-        const result = this.rollDice(max);
-        const response = `${result}`;
-
-        // Logging
-        if (lastResult === null) {
-            console.log('Roll max:', max);
-            console.log('Roll result:', result);
-        } else {
-            console.log('Roll executed in chain/pipeline:', result);
+        if (context.interaction) {
+            max = context.interaction.options.getInteger('max') || 6;
+        } else if (context.text) {
+            // For reactions or free text context
+            const match = context.text.match(/(\d+)/);
+            if (match) max = parseInt(match[1]);
         }
 
-        // Emit for UI/overlay
-        eventEmitter.emit('broadcast', {
-            type: 'command:roll',
-            payload: response
-        });
+        const result = this.rollDice(max);
 
-        return response;
+        console.log('Roll max:', max);
+        console.log('Roll result:', result);
+
+        return `🎲 You rolled a ${result} on a ${max} sided die!`;
     }
 
     rollDice(max) {

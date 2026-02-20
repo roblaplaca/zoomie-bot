@@ -2,20 +2,44 @@ const Command = require('../command-interface.js');
 let eventEmitter = require('../../core/eventEmitter');
 
 class RandomNumber extends Command {
-    execute(context) {
-        const { message, lastResult } = context;
+    static slashData = require('discord.js').SlashCommandBuilder
+        ? new (require('discord.js').SlashCommandBuilder)()
+            .setName('random')
+            .setDescription('Generate a random number between min and max')
+            .addIntegerOption(option =>
+                option.setName('min')
+                      .setDescription('Minimum number')
+                      .setRequired(false)
+            )
+            .addIntegerOption(option =>
+                option.setName('max')
+                      .setDescription('Maximum number')
+                      .setRequired(false)
+            )
+        : undefined;
 
-        // Extract min and max from message: "!random 10 50"
-        const args = message.trim().split(/\s+/).slice(1); // skip !random
+    async execute(context) {
+        const { interaction, message, lastResult, text } = context;
+
         let min = 1;
         let max = 100;
 
-        if (args.length === 2) {
-            const parsedMin = parseInt(args[0]);
-            const parsedMax = parseInt(args[1]);
-            if (!isNaN(parsedMin) && !isNaN(parsedMax) && parsedMin <= parsedMax) {
-                min = parsedMin;
-                max = parsedMax;
+        if (interaction) {
+            // Slash command
+            const minOpt = interaction.options.getInteger('min');
+            const maxOpt = interaction.options.getInteger('max');
+            if (minOpt !== null) min = minOpt;
+            if (maxOpt !== null) max = maxOpt;
+        } else if (text) {
+            // Reaction or context-based trigger
+            const args = text.trim().split(/\s+/);
+            if (args.length >= 2) {
+                const parsedMin = parseInt(args[0]);
+                const parsedMax = parseInt(args[1]);
+                if (!isNaN(parsedMin) && !isNaN(parsedMax) && parsedMin <= parsedMax) {
+                    min = parsedMin;
+                    max = parsedMax;
+                }
             }
         }
 

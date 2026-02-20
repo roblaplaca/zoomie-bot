@@ -2,49 +2,59 @@ const Command = require('../command-interface.js');
 const learnedQuotesDao = require('../../data/learnedQuotesDao');
 const Logger = require('../../core/logger');
 const logger = new Logger();
+const { SlashCommandBuilder } = require('discord.js');
 
 class LearnCommand extends Command {
+
+    static slashData = new SlashCommandBuilder()
+        .setName('learn')
+        .setDescription('Teach the bot a new quote for someone or something')
+        .addStringOption(option =>
+            option.setName('target')
+                  .setDescription('Who or what this quote is for (mention or name)')
+                  .setRequired(true)
+        )
+        .addStringOption(option =>
+            option.setName('quote')
+                  .setDescription('The quote to learn')
+                  .setRequired(true)
+        );
+
     async execute(context) {
-        const { args, guildId } = context;
+        const { interaction, guildId, subject, text } = context;
 
-        if (args.length < 2) {
-            return "Usage: !learn @user|concept [quote]";
-        }
+        if (!guildId) return 'This command must be used on a server.';
 
-        // Extract target (could be a user mention or concept string)
-        const target = args.shift();
-        let targetIdOrConcept;
+        // Determine target and quote depending on source
+        let targetInput, quote;
 
-        // Check if it's a user mention
-        const mentionMatch = target.match(/^<@!?(\d+)>$/);
-        if (mentionMatch) {
-            targetIdOrConcept = mentionMatch[1]; // Discord user ID
+        if (interaction) {
+            // Slash command
+            targetInput = interaction.options.getString('target').trim();
+            quote = interaction.options.getString('quote').trim();
         } else {
-            // Treat as concept string
-            targetIdOrConcept = target.toLowerCase(); // e.g., "trashtalk"
+            // Reaction trigger
+            targetInput = subject?.id ? `<@${subject.id}>` : subject; // subject = message author or string
+            quote = text?.trim() || '[no quote provided]';
         }
 
-        const quote = args.join(' ').trim();
-        if (!quote) {
-            return "You must provide a quote to learn!";
-        }
+        // Check if target is a user mention
+        const mentionMatch = targetInput.match(/^<@!?(\d+)>$/);
+        const isUser = !!mentionMatch;
+        const targetIdOrSubject = isUser ? mentionMatch[1] : targetInput.toLowerCase();
 
         try {
-            await learnedQuotesDao.addQuote(guildId, targetIdOrConcept, quote);
+            await learnedQuotesDao.addQuote(guildId, targetIdOrSubject, quote);
+            logger.info(`Learned quote for "${targetIdOrSubject}" in guild ${guildId}: ${quote}`);
 
-            logger.info(
-                `Learned quote for "${targetIdOrConcept}" in guild ${guildId}: "${quote}"`
-            );
-
-            if (mentionMatch) {
-                return `Learned a new quote for <@${targetIdOrConcept}>!`;
-            } else {
-                return `Learned a new quote for concept "${targetIdOrConcept}"!`;
-            }
+            // Return friendly message
+            return isUser
+                ? `🧠 Learned a new quote for <@${targetIdOrSubject}>: ${quote}`
+                : `🧠 Learned a new quote for ${targetIdOrSubject}: ${quote}`;
 
         } catch (err) {
             logger.error('Error saving learned quote', err);
-            return "Failed to save quote. Please try again later.";
+            return 'Failed to save quote. Please try again later.';
         }
     }
 }

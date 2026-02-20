@@ -3,6 +3,8 @@ const crypto = require('crypto');
 const querystring = require('querystring');
 const { Client, GatewayIntentBits, Partials } = require('discord.js');
 
+const registerSlashCommands = require('../core/registerSlashCommands');
+
 class DiscordClient {
     constructor() {
         this.clientId = process.env.DISCORD_CLIENT_ID;
@@ -72,8 +74,17 @@ class DiscordClient {
         });
 
         return new Promise((resolve, reject) => {
-            this.client.once('ready', () => {
+            this.client.once('ready', async () => {
                 console.log('Discord Bot is ready!');
+
+                const guildId = process.env.NODE_ENV === 'development' ? process.env.DISCORD_GUILD_ID : undefined;
+
+                await registerSlashCommands({
+                    token: this.botToken,
+                    clientId: this.clientId,
+                    guildId
+                });
+
                 resolve();
             });
 

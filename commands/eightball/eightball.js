@@ -1,29 +1,29 @@
 const Command = require('../command-interface.js');
-let eventEmitter = require('../../core/eventEmitter');
+const { SlashCommandBuilder } = require('discord.js');
 
 class EightBall extends Command {
-    execute(context) {
-        const { message, lastResult } = context;
 
-        // Optional: extract question for logging
-        const question = message.replace(/^!8ball\s*/i, '').trim();
+    static slashData = new SlashCommandBuilder()
+        .setName('8ball')
+        .setDescription('Ask the 8ball a question')
+        .addStringOption(option =>
+            option.setName('question')
+                  .setDescription('Your question for the 8ball')
+                  .setRequired(false)
+        );
 
-        const response = this.getRandomAnswer();
+    async execute(context) {
+        // Support both slash commands and reactions
+        const question = context.interaction
+            ? context.interaction.options.getString('question') || '[no question]'
+            : context.text || '[no question]';
 
-        if (lastResult === null) {
-            console.log('8Ball question:', question || '[no question]');
-            console.log('8Ball cat response:', response);
-        } else {
-            console.log('8Ball executed in chain/pipeline:', response);
-        }
+        const answer = this.getRandomAnswer();
 
-        // Emit for UI/overlay
-        eventEmitter.emit('broadcast', {
-            type: 'command:8ball',
-            payload: response
-        });
+        console.log('8Ball question:', question);
+        console.log('8Ball response:', answer);
 
-        return response;
+        return `🎱 ${answer}`;
     }
 
     getRandomAnswer() {
@@ -50,8 +50,7 @@ class EightBall extends Command {
             "Purrhaps not today."
         ];
 
-        const index = Math.floor(Math.random() * catAnswers.length);
-        return catAnswers[index];
+        return catAnswers[Math.floor(Math.random() * catAnswers.length)];
     }
 }
 

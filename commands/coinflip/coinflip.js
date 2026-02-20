@@ -1,31 +1,20 @@
 const Command = require('../command-interface.js');
-let eventEmitter = require('../../core/eventEmitter');
+const { SlashCommandBuilder } = require('discord.js');
 
 class CoinFlip extends Command {
-    execute(context) {
-        const { lastResult } = context;
 
-        const result = this.flipCoin();
-        const response = `It's ${result}!`;
+    static slashData = new SlashCommandBuilder()
+        .setName('coinflip')
+        .setDescription('Flip a coin');
 
-        // Logging
-        if (lastResult === null) {
-            console.log('CoinFlip result:', result);
-        } else {
-            console.log('CoinFlip executed in chain/pipeline:', result);
-        }
+    async execute({ interaction }) {
 
-        // Emit for UI/overlay
-        eventEmitter.emit('broadcast', {
-            type: 'command:coinflip',
-            payload: response
-        });
+        const result = Math.random() < 0.5 ? 'heads' : 'tails';
+        const response = `🪙 It's ${result}!`;
+
+        console.log('CoinFlip result:', result);
 
         return response;
-    }
-
-    flipCoin() {
-        return Math.random() < 0.5 ? 'heads' : 'tails';
     }
 }
 

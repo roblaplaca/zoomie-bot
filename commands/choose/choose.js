@@ -1,33 +1,36 @@
-const Command = require('../command-interface.js');
-let eventEmitter = require('../../core/eventEmitter');
+const { SlashCommandBuilder } = require('discord.js');
+const Command = require('../command-interface');
 
 class Choose extends Command {
-    execute(context) {
-        const { args, lastResult } = context;
 
-        console.log('Choose context: ', context)
+    static slashData = new SlashCommandBuilder()
+        .setName('choose')
+        .setDescription('Pick randomly from your options')
+        .addStringOption(option =>
+            option.setName('options')
+                  .setDescription('Comma- or space-separated list of choices')
+                  .setRequired(true)
+        );
 
-    	let output = this.getRandomArg(args);
+    async execute({ interaction }) {
+        let optionsString = interaction.options.getString('options') || '';
+        optionsString = optionsString.trim();
 
-    	if (lastResult === null) {
-            console.log('choose: passthrough : ', output);
-        } else {
-            console.log('choose: execute');
-        }
+        if (!optionsString) return 'No valid choices provided!';
 
-        eventEmitter.emit('broadcast', {
-            type: 'command:choose',
-            payload: output
-        });
+        // Split by comma OR multiple spaces
+        const options = optionsString
+            .split(/\s*,\s*|\s+/)
+            .map(opt => opt.trim())
+            .filter(Boolean);
 
-        return output;
+        if (options.length === 0) return 'No valid choices provided!';
+
+        const randomIndex = Math.floor(Math.random() * options.length);
+        const choice = options[randomIndex];
+
+        return choice;
     }
-
-    getRandomArg(args) {
-		const randomIndex = Math.floor(Math.random() * args.length);
-
-		return args[randomIndex].trim();
-	}
 }
 
 module.exports = Choose;
