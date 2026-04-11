@@ -12,6 +12,11 @@ class WatchCommand extends Command {
             option.setName('url')
                   .setDescription('Twitch channel URL to watch')
                   .setRequired(true)
+        )
+        .addRoleOption(option =>
+            option.setName('role')
+                  .setDescription('Role to mention when this channel goes live (optional)')
+                  .setRequired(false)
         );
 
     async execute(context) {
@@ -21,15 +26,12 @@ class WatchCommand extends Command {
             return "Hisssss!!! I can only watch in a server channel, not a DM.";
         }
 
-        // Determine the URL from slash command or free-text
         const url = interaction?.options.getString('url')?.trim() || (text || '').trim();
-
         if (!url) {
             return "Hisssss!!! You didn't tell me who to watch, e.g.: /watch https://www.twitch.tv/heyitsquzo";
         }
 
         let platform, channelName;
-
         if (url.includes('twitch.tv')) {
             platform = 'twitch';
             channelName = url.split('twitch.tv/')[1].replace(/\/$/, '');
@@ -37,15 +39,18 @@ class WatchCommand extends Command {
             return "Hisssss!!! I can only watch Twitch for now.";
         }
 
-        // Make sure we have a valid channel ID
         const targetChannelId = channelId || interaction?.channelId;
         if (!targetChannelId) {
             return "Hisssss!!! I need a channel to watch in!";
         }
 
+        const role = interaction?.options.getRole('role') || null;
+        const roleId = role?.id || null;
+
         try {
-            await db.addToWatchlist(platform, channelName, guildId, targetChannelId);
-            return `Ready to pounce! I'll alert you when ${channelName} goes live!`;
+            await db.addToWatchlist(platform, channelName, guildId, targetChannelId, roleId);
+            const rolePart = role ? ` I'll ping ${role} when they go live.` : '';
+            return `Ready to pounce! I'll alert you when ${channelName} goes live!${rolePart}`;
         } catch (error) {
             logger.error('Error adding to watchlist:', error);
             return "Hissss!!! Something went wrong storing your watch request.";

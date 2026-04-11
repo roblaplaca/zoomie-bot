@@ -109,7 +109,8 @@ class WatchHandler {
             footer: { text: 'Zoomie Alerts' }
         };
 
-        const text = `🚨 ${streamData.user_name} just went live! Time to pounce! 🐱💨`;
+        const roleMention = watch.role_id ? `<@&${watch.role_id}> ` : '';
+        const text = `${roleMention}🚨 ${streamData.user_name} just went live! Time to pounce! 🐱💨`;
 
         try {
             await discordClient.sendEmbed(watch.discord_channel_id, { text, ...embed });

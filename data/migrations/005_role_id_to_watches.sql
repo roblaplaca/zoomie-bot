@@ -1,0 +1,1 @@
+ALTER TABLE watches ADD COLUMN role_id TEXT;

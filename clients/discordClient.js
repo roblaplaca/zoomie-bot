@@ -2,7 +2,6 @@ const axios = require('axios');
 const crypto = require('crypto');
 const querystring = require('querystring');
 const { Client, GatewayIntentBits, Partials } = require('discord.js');
-
 const registerSlashCommands = require('../core/registerSlashCommands');
 
 class DiscordClient {
@@ -16,9 +15,7 @@ class DiscordClient {
 
     getAuthUrl(req) {
         const scopes = 'bot applications.commands';
-
         const state = crypto.randomBytes(16).toString('hex');
-
         req.session.oauthState = state;
 
         const params = new URLSearchParams({
@@ -26,7 +23,7 @@ class DiscordClient {
             redirect_uri: this.redirectUri,
             response_type: 'code',
             scope: scopes,
-            permissions: '534723951680',
+            permissions: '805308416', // Manage Webhooks + Manage Roles
             state
         });
 
@@ -46,12 +43,9 @@ class DiscordClient {
                     redirect_uri: this.redirectUri,
                     scope: 'bot',
                 }),
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             });
-
-            return oauthResult.data; // Returns the full token object
+            return oauthResult.data;
         } catch (error) {
             console.error('Error exchanging code for token:', error);
             return null;
@@ -59,9 +53,7 @@ class DiscordClient {
     }
 
     async connect() {
-        if (this.client) {
-            return;
-        }
+        if (this.client) return;
 
         this.client = new Client({
             intents: [
@@ -76,15 +68,8 @@ class DiscordClient {
         return new Promise((resolve, reject) => {
             this.client.once('ready', async () => {
                 console.log('Discord Bot is ready!');
-
                 const guildId = process.env.NODE_ENV === 'development' ? process.env.DISCORD_GUILD_ID : undefined;
-
-                await registerSlashCommands({
-                    token: this.botToken,
-                    clientId: this.clientId,
-                    guildId
-                });
-
+                await registerSlashCommands({ token: this.botToken, clientId: this.clientId, guildId });
                 resolve();
             });
 
@@ -97,57 +82,37 @@ class DiscordClient {
         });
     }
 
-	async getChannelIdByName(channelName) {
-	    if (!this.client || !this.client.isReady()) {
-	        throw new Error('Discord client is not connected.');
-	    }
+    // =================================
+    // HELPER: get or create a webhook
+    // =================================
+    async getOrCreateWebhook(channelId, name = 'ZoomieWebhook', avatarURL) {
+        if (!this.client?.isReady()) throw new Error('Discord client is not connected.');
 
-	    let foundChannelId = null;
+        const channel = this.client.channels.cache.get(channelId);
+        if (!channel?.isTextBased()) throw new Error('Channel not found or not text-based');
 
-	    this.client.guilds.cache.forEach(guild => {
-	        guild.channels.cache.forEach(channel => {
-	            if (channel.isTextBased() && channel.name === channelName) {
-	                foundChannelId = channel.id;
-	                return;
-	            }
-	        });
-	        if (foundChannelId) return;
-	    });
-
-	    return foundChannelId;
-	}
-
-	listenToChannel(channelId, callback) {
-        if (!this.client || !this.client.isReady()) {
-            throw new Error('Discord client is not connected.');
+        // Try fetching existing webhook
+        const webhooks = await channel.fetchWebhooks();
+        let webhook = webhooks.find(wh => wh.name === name);
+        if (!webhook) {
+            // Create new webhook
+            webhook = await channel.createWebhook({ name, avatar: avatarURL });
         }
-
-        this.client.on('messageCreate', (message) => {
-            if (message.channel.id === channelId) {
-                callback(message);
-            }
-        });
+        return webhook;
     }
 
     async sendEmbed(channelId, { text, ...embedData }) {
-        if (!this.client || !this.client.isReady()) {
-            throw new Error('Discord client is not connected.');
-        }
+        if (!this.client?.isReady()) throw new Error('Discord client is not connected.');
 
         const channel = this.client.channels.cache.get(channelId);
-        if (!channel || !channel.isTextBased()) {
-            console.warn('Discord channel not found or not text-based:', channelId);
-            return;
-        }
+        if (!channel?.isTextBased()) return;
 
-        // Only send image if url is provided
         if (embedData.image && embedData.image.url && typeof embedData.image.url !== 'string') {
             embedData.image.url = String(embedData.image.url);
         }
 
         await channel.send({ content: text, embeds: [embedData] });
     }
-
 }
 
 module.exports = new DiscordClient();

@@ -11,13 +11,13 @@ const pool = new Pool({
 
 const dao = {
     // Add a channel to watch
-    async addToWatchlist(platform, channelName, discordGuildId, discordChannelId) {
+    async addToWatchlist(platform, channelName, discordGuildId, discordChannelId, roleId = null) {
         const res = await pool.query(
-            `INSERT INTO watches (platform, channel_name, discord_guild_id, discord_channel_id)
-             VALUES ($1, $2, $3, $4)
+            `INSERT INTO watches (platform, channel_name, discord_guild_id, discord_channel_id, role_id)
+             VALUES ($1, $2, $3, $4, $5)
              ON CONFLICT (platform, channel_name, discord_guild_id, discord_channel_id) DO NOTHING
              RETURNING *`,
-            [platform, channelName, discordGuildId, discordChannelId]
+            [platform, channelName, discordGuildId, discordChannelId, roleId]
         );
         return res.rows[0]?.id || null;
     },
@@ -60,11 +60,34 @@ const dao = {
     // Get all Twitch watches
     async getAllTwitchWatches() {
         const res = await pool.query(
-            `SELECT id, platform, channel_name, discord_guild_id, discord_channel_id, last_stream_id
+            `SELECT id, platform, channel_name, discord_guild_id, discord_channel_id, last_stream_id, role_id
              FROM watches
              WHERE platform = $1`,
             ['twitch']
         );
+        return res.rows;
+    },
+
+    async saveRoleRedeem({ guildId, channelId, messageId, yesEmoji, noEmoji, roleId }) {
+        await pool.query(
+            `INSERT INTO role_redeems (guild_id, channel_id, message_id, yes_emoji, no_emoji, role_id)
+             VALUES ($1, $2, $3, $4, $5, $6)
+             ON CONFLICT (guild_id, message_id) DO UPDATE
+             SET channel_id = $2, yes_emoji = $4, no_emoji = $5, role_id = $6`,
+            [guildId, channelId, messageId, yesEmoji, noEmoji, roleId]
+        );
+    },
+
+    async getRoleRedeemByMessage(messageId) {
+        const res = await pool.query(
+            `SELECT * FROM role_redeems WHERE message_id = $1`,
+            [messageId]
+        );
+        return res.rows[0] || null;
+    },
+
+    async getAllRoleRedeems() {
+        const res = await pool.query(`SELECT * FROM role_redeems`);
         return res.rows;
     }
 };

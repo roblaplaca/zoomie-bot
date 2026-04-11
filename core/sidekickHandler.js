@@ -20,8 +20,6 @@ class SidekickHandler {
         const channelId = await discordClient.getChannelIdByName('sidekick');
 
 	    discordClient.listenToChannel(channelId, async (message) => {
-	    	logger.debug('message: ', message);
-
 	    	if (message.attachments && message.attachments.first()) {
 	    		await this.handleAudioMessage(message);
 	    		return;
