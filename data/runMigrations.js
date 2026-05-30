@@ -11,6 +11,9 @@ const pool = new Pool({
     ssl: process.env.PGSSLMODE === 'require' ? { rejectUnauthorized: false } : false,
 });
 
+// Postgres "already exists" error codes — safe to skip on a fresh schema_migrations bootstrap
+const ALREADY_EXISTS_CODES = new Set(['42P07', '42701', '42710', '42P16']);
+
 async function runMigrations() {
     await pool.query(`
         CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -32,9 +35,18 @@ async function runMigrations() {
         if (rows.length > 0) continue;
 
         const sql = fs.readFileSync(path.join(dir, file), 'utf8');
-        await pool.query(sql);
+        try {
+            await pool.query(sql);
+            console.log(`[migrations] applied ${file}`);
+        } catch (err) {
+            if (ALREADY_EXISTS_CODES.has(err.code)) {
+                console.warn(`[migrations] skipped ${file} (objects already exist)`);
+            } else {
+                throw err;
+            }
+        }
+
         await pool.query('INSERT INTO schema_migrations (filename) VALUES ($1)', [file]);
-        console.log(`[migrations] applied ${file}`);
     }
 }
 
