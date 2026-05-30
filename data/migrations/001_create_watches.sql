@@ -1,6 +1,4 @@
-DROP TABLE IF EXISTS watches;
-
-CREATE TABLE watches (
+CREATE TABLE IF NOT EXISTS watches (
     id SERIAL PRIMARY KEY,
     platform TEXT NOT NULL,
     channel_name TEXT NOT NULL,
