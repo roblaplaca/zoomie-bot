@@ -1,5 +1,6 @@
 const CatnipCommand = require('./catnip/catnip');
 const ChooseCommand = require('./choose/choose');
+const TreatCommand = require('./treat/treat');
 const CoinflipCommand = require('./coinflip/coinflip');
 const EightBallCommand = require('./eightball/eightball');
 const JokeCommand = require('./joke/joke');
@@ -15,7 +16,7 @@ const UnwatchCommand = require('./unwatch/unwatch');
 const commandRegistry = new Map();
 
 commandRegistry.set('8ball', EightBallCommand);
-// commandRegistry.set('catnip', CatnipCommand);
+commandRegistry.set('catnip', CatnipCommand);
 commandRegistry.set('choose', ChooseCommand);
 commandRegistry.set('coinflip', CoinflipCommand);
 commandRegistry.set('joke', JokeCommand);
@@ -25,6 +26,7 @@ commandRegistry.set('random', RandomCommand);
 commandRegistry.set('rocket', RocketCommand);
 commandRegistry.set('setroles', SetRolesCommand);
 commandRegistry.set('roll', RollCommand);
+commandRegistry.set('treat', TreatCommand);
 commandRegistry.set('watch', WatchCommand);
 commandRegistry.set('unwatch', UnwatchCommand);
 

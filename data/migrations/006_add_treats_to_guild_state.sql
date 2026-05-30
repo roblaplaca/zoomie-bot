@@ -1,0 +1,3 @@
+ALTER TABLE zoomie_guild_state
+    ADD COLUMN IF NOT EXISTS treat_count INT NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS treat_given_at BIGINT NULL;

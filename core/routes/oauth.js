@@ -53,8 +53,7 @@ oauthRouter.get('/discord/callback', async (req, res) => {
         env.set('DISCORD_EXPIRES_IN', tokenData.expires_in);
         env.set('DISCORD_SCOPE', tokenData.scope);
 
-        console.log(`Discord OAuth completed for code: ${code}`);
-        console.log(`Access token expires in ${tokenData.expires_in} seconds`);
+        logger.info(`Discord OAuth completed. Access token expires in ${tokenData.expires_in} seconds`);
 
         res.redirect('/');
     } catch (err) {

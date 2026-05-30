@@ -12,6 +12,7 @@ const oauthRouter = require('./core/routes/oauth.js');
 
 const Logger = require('./core/logger');
 const logger = new Logger();
+const runMigrations = require('./data/runMigrations');
 
 const discordClient = require('./clients/discordClient');
 const eventEmitter = require('./core/eventEmitter');
@@ -24,7 +25,7 @@ app.use(express.static(global.__basedir + '/public'));
 app.set('trust proxy', 1);
 app.use(
     session({
-        secret: process.env.SESSION_SECRET || 'super-secret-change-me',
+        secret: process.env.SESSION_SECRET || (() => { throw new Error('SESSION_SECRET env var is required'); })(),
         resave: false,
         saveUninitialized: false,
         cookie: {
@@ -44,6 +45,8 @@ app.get('/', (req, res) => {
 // Start server
 app.listen(4000, async () => {
     logger.info('Server started on port: 4000');
+
+    await runMigrations();
 
     // Connect Discord bot
     await discordClient.connect();

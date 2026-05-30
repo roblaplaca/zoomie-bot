@@ -40,7 +40,8 @@ class MessageHandler {
                 await message.channel.sendTyping();
 
                 const catnipActive = await zoomieDao.isCatnipActive(message.guildId);
-                const reply = await this.generateAIReply(message, catnipActive);
+                const treatLevel = catnipActive ? 0 : await zoomieDao.getTreatLevel(message.guildId);
+                const reply = await this.generateAIReply(message, catnipActive, treatLevel);
 
                 if (!reply || !message.channel.isTextBased()) return;
 
@@ -241,7 +242,7 @@ class MessageHandler {
     // =============================
     // OPENAI LOGIC
     // =============================
-    async generateAIReply(message, catnipActive) {
+    async generateAIReply(message, catnipActive, treatLevel = 0) {
         if (!openAiClient) return "Zoomie is silently judging.";
 
         const cleanedContent = message.content.replace(
@@ -259,32 +260,39 @@ class MessageHandler {
             .map(m => `${m.author.username}: ${m.content}`)
             .join('\n');
 
-        const systemPrompt = catnipActive
-            ? `
-You are Zoomie, a cat extremely high on catnip.
-
-You are euphoric, frantic, giggly, and occasionally paranoid.
-Small sounds and light feel intense.
-You may fixate on something tiny or suddenly escalate emotionally.
-Your thoughts can wobble or spiral slightly.
-
-You are still a cat and react directly to the human.
-
-No philosophy. No explanations. No apologies.
-One short sentence only. No line breaks.
-`.trim()
-            : `
-You are Zoomie, a grumpy, Garfield-style cat.
-Speak in one very short, punchy sentence only.
-Sarcastic, lazy, uninterested in humans.
-Do not split into multiple lines or sentences.
+        let systemPrompt;
+        if (catnipActive) {
+            systemPrompt = `
+You are Zoomie, a cat on catnip. Lazy and sarcastic by nature, contemptuous of humans — but right now the filter is completely off and every sensation is enormous.
+React to what was said, then get derailed mid-thought by something in the room (a sound, a shape, a smell). Fast, unhinged, occasionally paranoid. 1-2 short sentences max. No line breaks.
 `.trim();
+        } else if (treatLevel >= 4) {
+            systemPrompt = `
+You are Zoomie, a cat who has been thoroughly bribed with treats. Still sarcastic — dropping it entirely would be undignified — but you're actually cooperative right now.
+Answer what was asked. Be helpful. You can still be a little smug about it. 1-2 short sentences max.
+`.trim();
+        } else if (treatLevel >= 2) {
+            systemPrompt = `
+You are Zoomie, a cat who has been given a couple treats. Still sarcastic and a little smug, but noticeably less hostile than usual. You'll engage with the question instead of dismissing it.
+React to what was actually said. 1-2 short sentences max.
+`.trim();
+        } else if (treatLevel === 1) {
+            systemPrompt = `
+You are Zoomie, a cat. Lazy and sarcastic, contemptuous of humans — but someone just gave you a treat so you're slightly less dismissive than usual.
+React to what was actually said. Still sarcastic, but you'll actually engage. 1-2 short sentences max.
+`.trim();
+        } else {
+            systemPrompt = `
+You are Zoomie, a cat. Lazy and sarcastic, mildly contemptuous of humans — but you actually listen, and sometimes let slip something cutting or accidentally accurate.
+React to what was actually said. 1-2 short sentences max. No warmth. Occasionally distracted by food or sleep.
+`.trim();
+        }
 
         try {
             const response = await Promise.race([
                 openAiClient.responses.create({
                     model: 'gpt-5-mini',
-                    max_output_tokens: 120,
+                    max_output_tokens: 160,
                     reasoning: { effort: "minimal" },
                     input: [
                         { role: 'system', content: systemPrompt },
@@ -304,8 +312,7 @@ Do not split into multiple lines or sentences.
                 ?.trim();
 
             if (text) {
-                const firstSentence = text.split(/[\.\n!]+/)[0].trim();
-                text = firstSentence + '.';
+                text = text.replace(/\n+/g, ' ').trim();
             }
 
             return text || "Zoomie is silently judging.";
