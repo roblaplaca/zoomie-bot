@@ -294,7 +294,7 @@ You are Zoomie, a cat. Dry, sarcastic and a little aloof, but you secretly like 
 React to what was actually said. Occasionally distracted by food or sleep.
 `.trim();
         }
-        systemPrompt = `${systemPrompt}\n\n${groundRules}`;
+        systemPrompt = `${systemPrompt}\n\n${groundRules}\n\nYou are replying to ${message.author.username}. Talk to them directly as "you", not in the third person.`;
 
         try {
             const response = await Promise.race([
