@@ -59,9 +59,12 @@ See `.env.example` for the full list. Required ones:
 | `DISCORD_CLIENT_SECRET` | Application client secret |
 | `DISCORD_GUILD_ID` | Your server's guild ID |
 | `OPENAI_API_KEY` | OpenAI API key |
+| `TWITCH_CLIENT_ID` / `TWITCH_CLIENT_SECRET` | Twitch app credentials, used by `/watch` to check whether streamers are live |
 | `PGHOST` / `PGPORT` / `PGDATABASE` / `PGUSER` / `PGPASSWORD` | Postgres connection |
 
 `ZOOMIE_CATNIP_URL` is optional — a public image URL used as Zoomie's avatar during catnip mode.
+
+`DISCORD_ACCESS_TOKEN`, `DISCORD_REFRESH_TOKEN` and the other `DISCORD_TOKEN_*`/`DISCORD_EXPIRES_IN`/`DISCORD_SCOPE` values are written to `.env` at runtime by the `/oauth/discord` login flow. Don't set them by hand or store them in Railway.
 
 ### Registering slash commands
 
@@ -74,9 +77,50 @@ node core/registerSlashCommands.js
 ## Deployment (Railway)
 
 1. Create a new Railway project and connect this repo
-2. Add a Postgres plugin
-3. Set all environment variables from `.env.example` in the Railway dashboard
+2. Add a Postgres plugin. Leave its Public Access off; Zoomie connects over Railway's private network.
+3. Set the environment variables from `.env.example` in the Railway dashboard. Reference the Postgres service for the `PG*` values (e.g. `${{Postgres.PGPASSWORD}}`) instead of pasting them, so a regenerated password carries over on the next deploy.
 4. Deploy — migrations run automatically on every startup, so no manual DB steps are needed
+
+## Rotating credentials
+
+Where to reset each secret if it's ever exposed:
+
+| Secret | Where to rotate |
+|---|---|
+| `OPENAI_API_KEY` | platform.openai.com → API keys: delete the key, create a new one. Check Usage/Billing for spikes. |
+| `DISCORD_BOT_TOKEN` | Discord Developer Portal → app → Bot → Reset Token |
+| `DISCORD_CLIENT_SECRET` | Discord Developer Portal → app → OAuth2 → Reset Secret |
+| Discord OAuth tokens | Discord → User Settings → Authorized Apps → Deauthorize Zoomie, then log in again at `/oauth/discord` |
+| `PGPASSWORD` | Railway → Postgres → Database → Config → Regenerate. Don't edit the password variable by hand. |
+| `TWITCH_CLIENT_SECRET` | dev.twitch.tv → Console → Applications → Manage → New Secret. **This Twitch app is shared with the Sidekick project**, so update both. |
+| `SESSION_SECRET` | Generate a new one with `openssl rand -hex 32` (logs out existing web sessions) |
+
+After rotating, update the values in Railway Variables and redeploy.
+
+## Security incident: Railway, 2026-10-21
+
+Railway reported that environment variables stored on its platform may have been accessed and decrypted by a third party ([status](https://status.railway.com/incident/QH8L8B3E)). Builds were paused platform-wide, and Zoomie is offline until it can be redeployed with new credentials.
+
+**Done (2026-10-21)**
+
+- [x] OpenAI key revoked and replaced; usage reviewed, nothing unusual
+- [x] Discord bot token and client secret reset; Zoomie deauthorized in Discord
+- [x] Postgres password regenerated; Public Access and `DATABASE_PUBLIC_URL` removed
+- [x] Twitch client secret replaced (shared with Sidekick)
+- [x] New `SESSION_SECRET` generated
+
+**Done (2026-10-31)**
+
+- [x] New credentials set in Zoomie's Railway Variables; `PG*` variables reference the Postgres service
+- [x] OpenAI key recreated as a restricted key (Responses: Write only); prepaid credits with auto-reload off
+- [x] Zoomie redeployed; Discord, database and Twitch stream alerts confirmed working
+
+**Still to do**
+
+- [ ] Check GitHub → Settings → Security log for unrecognized activity
+- [ ] Inventory Sidekick's Railway variables and rotate anything not covered above
+- [ ] Update and redeploy Sidekick (including the new Twitch secret)
+- [ ] Update local `.env` with the new values
 
 ## Migrations
 
